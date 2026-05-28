@@ -1,0 +1,39 @@
+import type { DiscogsSearchResult } from '@/services/discogs';
+import type { RecordFormat, VinylRecord } from '@/db/types';
+
+export function mapDiscogsToRecord(result: DiscogsSearchResult): Partial<VinylRecord> {
+  const parts = result.title.split(' - ');
+  const artist = parts[0]?.trim() ?? result.title;
+  const title  = parts.slice(1).join(' - ').trim() || '';
+
+  return {
+    artist,
+    title,
+    year:          result.year ? parseInt(result.year) : undefined,
+    label:         result.label?.[0],
+    catalogNumber: result.catno,
+    genres:        result.genre,
+    styles:        result.style,
+    country:       result.country,
+    discogsId:     String(result.id),
+    discogsUrl:    result.resource_url,
+    coverUrl:      result.cover_image,
+    format:        mapFormat(result.format),
+    currency:      'RON',
+    status:        'owned',
+    condition:     'VG+',
+    createdAt:     new Date(),
+    updatedAt:     new Date(),
+  };
+}
+
+function mapFormat(formats?: string[]): RecordFormat {
+  if (!formats) return 'LP';
+  const f = formats.join(' ').toLowerCase();
+  if (f.includes('7"') || f.includes('single')) return '7"';
+  if (f.includes('10"'))                         return '10"';
+  if (f.includes('12"') || f.includes('maxi'))   return '12"';
+  if (f.includes('ep'))                          return 'EP';
+  if (f.includes('box'))                         return 'Box Set';
+  return 'LP';
+}

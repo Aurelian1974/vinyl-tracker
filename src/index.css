@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    color-scheme: dark;
+    font-size: 16px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-slate-900 text-white;
+    font-family: system-ui, -apple-system, sans-serif;
+    overscroll-behavior: none;
+  }
+
+  /* Prevent iOS zoom on input focus */
+  input, select, textarea {
+    font-size: 16px;
+  }
+
+  /* Safe area for iOS home bar */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  /* Hide scrollbar but keep scroll */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
