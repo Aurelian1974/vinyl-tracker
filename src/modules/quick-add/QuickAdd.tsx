@@ -136,7 +136,7 @@ export function QuickAdd() {
         <h1 className="text-lg font-bold flex-1">Adaugă vinil</h1>
       </header>
 
-      <form onSubmit={handleSave} className="p-4 space-y-5 pb-24">
+      <form onSubmit={handleSave} className="p-4 space-y-5 pb-40">
         {/* Duplicate warning */}
         {dupCheck === 'owned' && (
           <div className="flex items-center gap-2 bg-amber-900/40 border border-amber-700 rounded-xl px-4 py-3 text-amber-300 text-sm">
@@ -159,6 +159,35 @@ export function QuickAdd() {
             placeholder="Artist + titlu pentru auto-completare..."
             className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-base text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-indigo-500"
           />
+        </div>
+
+        {/* Barcode */}
+        <div>
+          <label className="block text-sm text-slate-400 mb-1.5">Barcode</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={barcode}
+              onChange={e => setBarcode(e.target.value)}
+              placeholder="EAN-13 / UPC-A"
+              className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-base text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <button
+              type="button"
+              onClick={() => navigate({ to: '/scanner' })}
+              className="bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-xl px-4 py-3 text-white min-h-[52px] min-w-[52px] flex items-center justify-center transition-colors"
+              title="Scanează barcode"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M12 4v1M4 12h1M20 12h-1M12 20v-1M6.34 6.34l.7.7M17.66 6.34l-.7.7M6.34 17.66l.7-.7M17.66 17.66l-.7-.7" />
+                <rect x="9" y="9" width="6" height="6" rx="1" strokeWidth={2} />
+              </svg>
+            </button>
+          </div>
+          {barcode && (
+            <p className="text-xs text-indigo-400 mt-1">📷 Barcode scanat: {barcode}</p>
+          )}
         </div>
 
         <DiscogsResultList results={discogsResults} onSelect={applyDiscogs} isLoading={isSearching} />
@@ -304,7 +333,7 @@ export function QuickAdd() {
         </div>
 
         {/* Submit */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-slate-900/95 backdrop-blur border-t border-slate-800">
+        <div className="fixed bottom-14 left-0 right-0 z-40 p-4 bg-slate-900/95 backdrop-blur border-t border-slate-800">
           <button
             type="submit"
             disabled={saving}
