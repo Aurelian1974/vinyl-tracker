@@ -123,7 +123,12 @@ export function QuickAdd() {
       if (record.coverUrl) void precacheDiscogCovers([record.coverUrl]);
       if (location) setLastLocation(location);
       navigator.vibrate?.(80);
-      await navigate({ to: '/collection' });
+      // Reset formular pentru adăugare rapidă a urmatorului vinil
+      setArtist(''); setTitle(''); setYear(''); setFormat('LP');
+      setLabel(''); setCatNo(''); setCond('VG+'); setSleeveC('VG+');
+      setPrice(''); setNotes(''); setBarcode(''); setDiscogsId('');
+      setCoverUrl(''); setDiscogsQuery(''); setDiscogsResults([]);
+      setPriceSuggestion(null); setPressingNotes(''); setMatrixNumber('');
     } finally {
       setSaving(false);
     }
