@@ -83,7 +83,7 @@ const routeTree = rootRoute.addChildren([
   settingsRoute,
 ]);
 
-export const router = createRouter({ routeTree });
+export const router = createRouter({ routeTree, basepath: '/vinyl-tracker' });
 
 declare module '@tanstack/react-router' {
   interface Register {
