@@ -327,6 +327,7 @@ function LocalSyncSection() {
           <p className="text-xs text-slate-400">
             Salvează automat colecția într-un fișier pe disc.{' '}
             <span className="text-slate-300">Supraviețuiește oricărui clear cache.</span>
+            {' '}Pe Android, după primul tap de reconectare permisiunea devine permanentă.
           </p>
 
           {/* Folder ales */}

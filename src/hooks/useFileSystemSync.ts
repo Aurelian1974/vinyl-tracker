@@ -98,6 +98,9 @@ export function useFileSystemSync() {
       await db.fsHandles.put({ key: FS_HANDLE_KEY, handle });
       setDirName(handle.name);
       setNeedsPermission(false);
+      // Solicită permisiunea persistentă imediat după alegere — pe Chrome 122+ Android
+      // rămâne granted după reload fără tap suplimentar
+      await askPermission(handle);
       setMessage(`Folder selectat: ${handle.name}`);
     } catch {
       // user cancelled
