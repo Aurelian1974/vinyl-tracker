@@ -331,18 +331,31 @@ function LocalSyncSection() {
 
           {/* Folder ales */}
           {sync.dirName ? (
-            <div className="flex items-center gap-2 bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2">
-              <span className="text-green-400 text-sm">📁</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-white text-sm truncate">{sync.dirName}</p>
-                <p className="text-slate-400 text-xs">vinyl-tracker-data.json</p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2">
+                <span className="text-green-400 text-sm">📁</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm truncate">{sync.dirName}</p>
+                  <p className="text-slate-400 text-xs">vinyl-tracker-data.json</p>
+                </div>
+                <button
+                  onClick={() => setConfirming(true)}
+                  className="text-slate-500 hover:text-red-400 text-xs transition-colors px-2 py-1"
+                >
+                  Elimină
+                </button>
               </div>
-              <button
-                onClick={() => setConfirming(true)}
-                className="text-slate-500 hover:text-red-400 text-xs transition-colors px-2 py-1"
-              >
-                Elimină
-              </button>
+
+              {/* Banner reconectare — apare după reload dacă permisiunea expiră */}
+              {sync.needsPermission && (
+                <button
+                  onClick={() => void sync.reconnect()}
+                  className="w-full py-2.5 rounded-lg bg-amber-600/80 border border-amber-500/50 text-white text-sm font-medium active:bg-amber-700 flex items-center justify-center gap-2"
+                >
+                  <span>⚠️</span>
+                  <span>Apasă pentru a reconecta folderul</span>
+                </button>
+              )}
             </div>
           ) : (
             <button

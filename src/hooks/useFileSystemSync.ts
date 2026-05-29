@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { db } from '@/db/db';
 import { useAppStore } from '@/stores/useAppStore';
 
@@ -16,38 +16,76 @@ export interface SyncData {
 
 // File System Access API — nu e în lib.dom standard, cast explicit
 type FSHandle = FileSystemDirectoryHandle & {
-  queryPermission: (opts: { mode: string }) => Promise<string>;
-  requestPermission: (opts: { mode: string }) => Promise<string>;
+  queryPermission: (opts: { mode: string }) => Promise<PermissionState>;
+  requestPermission: (opts: { mode: string }) => Promise<PermissionState>;
 };
 
-/** Verifică/cere permisiune pe un handle existent */
-async function verifyPermission(handle: FileSystemDirectoryHandle): Promise<boolean> {
-  const h = handle as FSHandle;
+/** Verifică permisiunea fără gest utilizator (silențios) */
+async function checkPermission(handle: FileSystemDirectoryHandle): Promise<PermissionState> {
   try {
-    if ((await h.queryPermission({ mode: 'readwrite' })) === 'granted') return true;
-    if ((await h.requestPermission({ mode: 'readwrite' })) === 'granted') return true;
+    return await (handle as FSHandle).queryPermission({ mode: 'readwrite' });
   } catch {
-    // queryPermission nu e suportat pe toate browserele, continuăm oricum
-    return true;
+    // queryPermission ne-suportat — presupunem granted
+    return 'granted';
   }
-  return false;
+}
+
+/** Cere permisiunea — necesită gest utilizator (tap/click) */
+async function askPermission(handle: FileSystemDirectoryHandle): Promise<boolean> {
+  try {
+    const state = await (handle as FSHandle).requestPermission({ mode: 'readwrite' });
+    return state === 'granted';
+  } catch {
+    return false;
+  }
 }
 
 export function useFileSystemSync() {
-  const [status, setStatus]         = useState<'idle' | 'busy' | 'ok' | 'error'>('idle');
-  const [message, setMessage]       = useState('');
-  const [dirName, setDirName]       = useState<string | null>(null);
-  const { defaultCurrency }         = useAppStore();
+  const [status, setStatus]             = useState<'idle' | 'busy' | 'ok' | 'error'>('idle');
+  const [message, setMessage]           = useState('');
+  const [dirName, setDirName]           = useState<string | null>(null);
+  const [needsPermission, setNeedsPermission] = useState(false);
+  const { defaultCurrency }             = useAppStore();
 
   const isSupported = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
+
+  // Auto-init pe mount: citește folderul din DB și verifică starea permisiunii
+  useEffect(() => {
+    if (!isSupported) return;
+    void (async () => {
+      const entry = await db.fsHandles.get(FS_HANDLE_KEY);
+      if (!entry) return;
+      setDirName(entry.handle.name);
+      const perm = await checkPermission(entry.handle);
+      setNeedsPermission(perm !== 'granted');
+    })();
+  }, [isSupported]);
+
+  /** Reconectare folder după reload (necesită tap utilizator) */
+  const reconnect = useCallback(async () => {
+    const entry = await db.fsHandles.get(FS_HANDLE_KEY);
+    if (!entry) return;
+    setStatus('busy');
+    const granted = await askPermission(entry.handle);
+    if (granted) {
+      setNeedsPermission(false);
+      setStatus('ok');
+      setMessage('Folder reconectat ✓');
+    } else {
+      setStatus('error');
+      setMessage('Permisiune refuzată');
+    }
+  }, []);
 
   /** Returnează handle-ul stocat, dacă există și permisiunea e validă */
   const getStoredHandle = useCallback(async (): Promise<FileSystemDirectoryHandle | null> => {
     const entry = await db.fsHandles.get(FS_HANDLE_KEY);
     if (!entry) return null;
-    const ok = await verifyPermission(entry.handle);
-    if (!ok) return null;
-    return entry.handle;
+    const perm = await checkPermission(entry.handle);
+    if (perm === 'granted') return entry.handle;
+    // 'prompt' sau 'denied' — nu putem cere fără gest utilizator
+    setNeedsPermission(true);
+    return null;
   }, []);
 
   /** Alege folder nou */
@@ -59,6 +97,7 @@ export function useFileSystemSync() {
       }).showDirectoryPicker({ mode: 'readwrite' });
       await db.fsHandles.put({ key: FS_HANDLE_KEY, handle });
       setDirName(handle.name);
+      setNeedsPermission(false);
       setMessage(`Folder selectat: ${handle.name}`);
     } catch {
       // user cancelled
@@ -135,22 +174,29 @@ export function useFileSystemSync() {
   /** Inițializare la pornire: verifică dacă există handle și setează dirName */
   const init = useCallback(async () => {
     const entry = await db.fsHandles.get(FS_HANDLE_KEY);
-    if (entry) setDirName(entry.handle.name);
+    if (entry) {
+      setDirName(entry.handle.name);
+      const perm = await checkPermission(entry.handle);
+      setNeedsPermission(perm !== 'granted');
+    }
   }, []);
 
   /** Șterge folderul de sync */
   const clearFolder = useCallback(async () => {
     await db.fsHandles.delete(FS_HANDLE_KEY);
     setDirName(null);
+    setNeedsPermission(false);
     setMessage('Sync dezactivat');
   }, []);
 
   return {
     isSupported,
     dirName,
+    needsPermission,
     status,
     message,
     pickFolder,
+    reconnect,
     saveToFile,
     restoreFromFile,
     clearFolder,

@@ -25,7 +25,7 @@ async function hasPermission(handle: FileSystemDirectoryHandle): Promise<boolean
 
 /**
  * Salvează automat colecția în fișierul de sync.
- * Silențios dacă nu există folder configurat sau permisiunea a expirat.
+ * Silențios dacă nu există folder configurat sau permisiunea nu e 'granted'.
  */
 export async function autoSave(): Promise<void> {
   try {
