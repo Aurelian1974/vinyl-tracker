@@ -8,19 +8,34 @@ import type { DiscogsSearchResult } from '@/services/discogs';
 export function ScannerView() {
   const navigate = useNavigate();
   const {
-    ref, lastBarcode, existingRecord, wishlistMatch,
-    discogsResults, isSearching, error, reset,
+    videoRef, engine, lastBarcode, existingRecord, wishlistMatch,
+    discogsResult, isSearching, cameraError, reset,
   } = useBarcodeScanner();
 
   const goAdd = (barcode: string, discogs?: DiscogsSearchResult) => {
     void navigate({ to: '/add', search: { barcode, q: discogs?.title } });
   };
 
+  if (cameraError) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-black text-white/60 text-sm px-8 text-center">
+        {cameraError}
+      </div>
+    );
+  }
+
   return (
     <div className="relative h-screen bg-black overflow-hidden">
-      <video ref={ref} className="absolute inset-0 w-full h-full object-cover" playsInline muted />
+      <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted />
 
       {!lastBarcode && <ScanOverlay />}
+
+      {/* Engine badge — visible only in development */}
+      {import.meta.env.DEV && engine !== 'detecting' && (
+        <span className="absolute top-3 right-3 z-20 text-[10px] text-white/25 font-mono">
+          {engine}
+        </span>
+      )}
 
       {/* Back button */}
       <button
@@ -45,14 +60,6 @@ export function ScannerView() {
         </ResultOverlay>
       )}
 
-      {/* Error */}
-      {error && !isSearching && (
-        <ResultOverlay>
-          <p className="text-amber-300 text-sm mb-4">{error}</p>
-          <ActionButtons onReset={reset} onManual={() => navigate({ to: '/add', search: { barcode: lastBarcode ?? '', q: undefined } })} />
-        </ResultOverlay>
-      )}
-
       {/* Already owned */}
       {existingRecord && !isSearching && (
         <ResultOverlay>
@@ -65,26 +72,26 @@ export function ScannerView() {
       {wishlistMatch && !existingRecord && !isSearching && (
         <ResultOverlay>
           <WishlistCard record={wishlistMatch} onReset={reset}
-            onAdd={() => goAdd(lastBarcode!, discogsResults[0])} />
+            onAdd={() => goAdd(lastBarcode!, discogsResult ?? undefined)} />
         </ResultOverlay>
       )}
 
-      {/* Discogs results / not found */}
+      {/* Discogs result / not found */}
       {!existingRecord && !wishlistMatch && !isSearching && lastBarcode && (
         <ResultOverlay>
-          {discogsResults.length > 0 ? (
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-              <p className="text-white font-medium">{discogsResults.length} ediții găsite</p>
-              {discogsResults.slice(0, 5).map(r => (
-                <button key={r.id} onClick={() => goAdd(lastBarcode, r)}
-                  className="w-full flex items-center gap-3 bg-white/10 rounded-xl p-3 text-left min-h-[60px]">
-                  {r.cover_image && <img src={r.cover_image} alt="" className="w-12 h-12 rounded object-cover" />}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white text-sm truncate">{r.title}</p>
-                    <p className="text-white/60 text-xs">{[r.year, r.country].filter(Boolean).join(' · ')}</p>
-                  </div>
-                </button>
-              ))}
+          {discogsResult ? (
+            <div className="space-y-3">
+              <p className="text-white font-medium">Găsit pe Discogs</p>
+              <button onClick={() => goAdd(lastBarcode, discogsResult)}
+                className="w-full flex items-center gap-3 bg-white/10 rounded-xl p-3 text-left min-h-[60px]">
+                {discogsResult.cover_image && (
+                  <img src={discogsResult.cover_image} alt="" className="w-12 h-12 rounded object-cover" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm truncate">{discogsResult.title}</p>
+                  <p className="text-white/60 text-xs">{[discogsResult.year, discogsResult.country].filter(Boolean).join(' · ')}</p>
+                </div>
+              </button>
               <ResetButton onReset={reset} />
             </div>
           ) : (

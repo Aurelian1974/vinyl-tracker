@@ -5,6 +5,7 @@ import { db } from '@/db/db';
 import { exportToCSV, exportToDiscogsCSV, importFromDiscogsCSV } from '@/utils/csvFormatter';
 import { StorageIndicator } from '@/components/ui/StorageIndicator';
 import { useAppStore } from '@/stores/useAppStore';
+import { useDiscogCovers } from '@/hooks/useDiscogCovers';
 import type { Currency } from '@/db/types';
 
 export function SettingsView() {
@@ -116,6 +117,11 @@ export function SettingsView() {
           <p className="text-slate-500 text-xs mt-2">{records.length} înregistrări în baza de date</p>
         </Section>
 
+        {/* Coperte offline */}
+        <Section title="Coperte offline">
+          <CoverCacheSection />
+        </Section>
+
         {/* Preferences */}
         <Section title="Preferințe">
           <div className="flex items-center justify-between">
@@ -162,6 +168,31 @@ export function SettingsView() {
           </div>
         </Section>
       </div>
+    </div>
+  );
+}
+
+function CoverCacheSection() {
+  const { totalCovers, isCaching, cachedCount, cacheAllCovers } = useDiscogCovers();
+
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-slate-300">Coperte Discogs offline</p>
+        <p className="text-slate-500 text-xs mt-0.5">
+          {totalCovers} viniluri cu copertă Discogs
+          {cachedCount > 0 && ` — ${cachedCount} descărcate`}
+        </p>
+      </div>
+      <button
+        onClick={() => void cacheAllCovers()}
+        disabled={isCaching || totalCovers === 0}
+        className="px-3 py-1.5 text-xs rounded-md bg-slate-700 text-white
+                   disabled:opacity-40 disabled:cursor-not-allowed
+                   active:bg-slate-600 transition-colors"
+      >
+        {isCaching ? 'Se descarcă...' : 'Descarcă toate'}
+      </button>
     </div>
   );
 }

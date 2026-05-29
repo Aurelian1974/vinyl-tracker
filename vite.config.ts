@@ -16,25 +16,12 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^\/api\.discogs\.com\//,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'discogs-cache',
-              networkTimeoutSeconds: 5,
-              expiration: { maxAgeSeconds: 60 * 60 * 24 },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/i\.discogs\.com\//,
-            handler: 'CacheFirst',
-            options: { cacheName: 'discogs-images', expiration: { maxEntries: 500 } },
-          },
-        ],
+      devOptions: {
+        enabled: false,
       },
       manifest: {
         name: 'VinylTracker',

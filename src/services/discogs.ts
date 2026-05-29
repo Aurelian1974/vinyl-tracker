@@ -60,3 +60,8 @@ export async function getDiscogsRelease(releaseId: string): Promise<DiscogsRelea
   if (!res.ok) throw new Error(`Discogs ${res.status}`);
   return res.json() as Promise<DiscogsRelease>;
 }
+
+export async function searchDiscogsBarcode(barcode: string): Promise<DiscogsSearchResult | null> {
+  const results = await searchDiscogs({ barcode });
+  return results[0] ?? null;
+}
