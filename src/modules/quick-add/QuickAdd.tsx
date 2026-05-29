@@ -11,6 +11,19 @@ import { useDuplicateCheck } from '@/hooks/useDuplicateCheck';
 import { precacheDiscogCovers } from '@/services/coverCache';
 import { ALL_CONDITIONS } from '@/utils/vinylGrading';
 import { autoSave } from '@/services/localSync';
+import { Toast } from '@/components/ui/Toast';
+
+// Mapare cod condiție → cheie API Discogs price suggestions
+const DISCOGS_PRICE_KEY: Record<string, string> = {
+  'M':   'Mint (M)',
+  'NM':  'Near Mint (NM or M-)',
+  'VG+': 'Very Good Plus (VG+)',
+  'VG':  'Very Good (VG)',
+  'G+':  'Good Plus (G+)',
+  'G':   'Good (G)',
+  'F':   'Fair (F)',
+  'P':   'Poor (P)',
+};
 
 const FORMATS: RecordFormat[] = ['LP', 'EP', '7"', '10"', '12"', 'Box Set', 'Single'];
 
@@ -40,6 +53,9 @@ export function QuickAdd() {
   const [isSearching,     setIsSearching]     = useState(false);
   const [saving,          setSaving]          = useState(false);
   const [priceSuggestion, setPriceSuggestion] = useState<Record<string, { currency: string; value: number }> | null>(null);
+  const [loadingPrice,    setLoadingPrice]    = useState(false);
+  const [toastMsg,        setToastMsg]        = useState('');
+  const [showToast,       setShowToast]       = useState(false);
   const [pressingNotes,   setPressingNotes]   = useState('');
   const [matrixNumber,    setMatrixNumber]    = useState('');
 
@@ -82,8 +98,11 @@ export function QuickAdd() {
     setDiscogsQuery('');
     // Fetch price suggestion for selected release
     if (mapped.discogsId) {
+      setLoadingPrice(true);
+      setPriceSuggestion(null);
       void getDiscogsPriceSuggestion(mapped.discogsId).then(data => {
         setPriceSuggestion(data);
+        setLoadingPrice(false);
       });
     }
   };
@@ -123,12 +142,18 @@ export function QuickAdd() {
       if (record.coverUrl) void precacheDiscogCovers([record.coverUrl]);
       if (location) setLastLocation(location);
       navigator.vibrate?.(80);
+      // Toast confirmare
+      const savedName = `${artist.trim()} — ${title.trim()}`;
+      setToastMsg(`✓ Salvat: ${savedName}`);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2500);
       // Reset formular pentru adăugare rapidă a urmatorului vinil
       setArtist(''); setTitle(''); setYear(''); setFormat('LP');
       setLabel(''); setCatNo(''); setCond('VG+'); setSleeveC('VG+');
       setPrice(''); setNotes(''); setBarcode(''); setDiscogsId('');
       setCoverUrl(''); setDiscogsQuery(''); setDiscogsResults([]);
       setPriceSuggestion(null); setPressingNotes(''); setMatrixNumber('');
+      setLoadingPrice(false);
     } finally {
       setSaving(false);
     }
@@ -136,6 +161,7 @@ export function QuickAdd() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-white">
+      <Toast message={toastMsg} visible={showToast} />
       <header className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3 flex items-center gap-3">
         <button onClick={() => navigate({ to: '/' })} className="p-2 -ml-2 text-slate-400 min-h-[44px] min-w-[44px] flex items-center justify-center">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -323,14 +349,36 @@ export function QuickAdd() {
               <option value="EUR">EUR</option>
             </select>
           </div>
-          {priceSuggestion && priceSuggestion[cond] && (
-            <p className="text-xs text-white/40 mt-1.5">
-              Discogs median ({cond}):{' '}
-              <span className="text-white/70 font-medium">
-                {priceSuggestion[cond].value.toFixed(0)} {priceSuggestion[cond].currency}
-              </span>
-            </p>
+          {loadingPrice && (
+            <p className="text-xs text-slate-500 mt-1.5">Se încarcă prețuri Discogs...</p>
           )}
+          {!loadingPrice && priceSuggestion && (() => {
+            const conditionsToShow: Array<{ code: string; label: string }> = [
+              { code: 'NM',  label: 'NM' },
+              { code: 'VG+', label: 'VG+' },
+              { code: 'VG',  label: 'VG' },
+            ];
+            const rows = conditionsToShow
+              .map(c => ({ ...c, data: priceSuggestion[DISCOGS_PRICE_KEY[c.code]] }))
+              .filter(c => c.data);
+            if (!rows.length) return null;
+            return (
+              <div className="mt-2 flex gap-3 flex-wrap">
+                {rows.map(c => (
+                  <span
+                    key={c.code}
+                    className={`text-xs px-2 py-0.5 rounded-full ${
+                      c.code === cond
+                        ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                        : 'text-white/40'
+                    }`}
+                  >
+                    {c.label}: {c.data.value.toFixed(0)} {c.data.currency}
+                  </span>
+                ))}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Location */}

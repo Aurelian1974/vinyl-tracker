@@ -66,6 +66,18 @@ export function BottomNav() {
 export function App() {
   const fsSync = useFileSystemSync();
   const [showReconnect, setShowReconnect] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'ok' | 'error' | null>(null);
+
+  // Indicator scurt după auto-save
+  useEffect(() => {
+    const handleSync = (e: Event) => {
+      const status = (e as CustomEvent<{ status: string }>).detail.status;
+      setSyncStatus(status === 'ok' ? 'ok' : 'error');
+      setTimeout(() => setSyncStatus(null), 2000);
+    };
+    window.addEventListener('vinyl-autosave', handleSync);
+    return () => window.removeEventListener('vinyl-autosave', handleSync);
+  }, []);
 
   useEffect(() => {
     // Request persistent storage on first load
@@ -113,6 +125,15 @@ export function App() {
 
   return (
     <>
+      {syncStatus && (
+        <div className={`fixed top-2 right-3 z-[95] text-xs px-2.5 py-1 rounded-full font-medium transition-all duration-300
+          ${syncStatus === 'ok'
+            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+            : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}
+        >
+          {syncStatus === 'ok' ? '💾 ✓' : '💾 ⚠'}
+        </div>
+      )}
       {showReconnect && (
         <div className="fixed top-0 inset-x-0 z-[100] bg-amber-600 text-white px-4 py-3 flex items-center justify-between gap-3 safe-area-top">
           <p className="text-sm font-medium">📁 Reconectează folderul sync: <span className="font-bold">{fsSync.dirName}</span></p>

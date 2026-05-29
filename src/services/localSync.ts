@@ -60,7 +60,9 @@ export async function autoSave(): Promise<void> {
     await writable.close();
 
     console.info(`[LocalSync] Auto-saved ${records.length} records`);
+    window.dispatchEvent(new CustomEvent('vinyl-autosave', { detail: { status: 'ok', count: records.length } }));
   } catch (e) {
     console.warn('[LocalSync] Auto-save failed', e);
+    window.dispatchEvent(new CustomEvent('vinyl-autosave', { detail: { status: 'error' } }));
   }
 }
