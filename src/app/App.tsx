@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { flushOfflineQueue } from '@/services/offlineQueue';
 import { useSessionBudget } from '@/hooks/useSessionBudget';
@@ -65,6 +65,7 @@ export function BottomNav() {
 
 export function App() {
   const fsSync = useFileSystemSync();
+  const [showReconnect, setShowReconnect] = useState(false);
 
   useEffect(() => {
     // Request persistent storage on first load
@@ -77,9 +78,13 @@ export function App() {
     window.addEventListener('online', handleOnline);
     if (navigator.onLine) void flushOfflineQueue();
 
-    // Auto-restore din fișier dacă IndexedDB e gol
+    // Auto-restore din fișier dacă IndexedDB e gol + verifică permisiunea sync
     void (async () => {
       await fsSync.init();
+      // Arată bannerul de reconectare dacă folderul e configurat dar permisiunea a expirat
+      if (fsSync.dirName && fsSync.needsPermission) {
+        setShowReconnect(true);
+      }
       const count = await db.records.count();
       if (count === 0) {
         const result = await fsSync.restoreFromFile();
@@ -93,5 +98,32 @@ export function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return null; // Router renders the actual pages
+  // Actualizează bannerul când starea permisiunii se schimbă
+  useEffect(() => {
+    if (fsSync.dirName && fsSync.needsPermission) setShowReconnect(true);
+    else setShowReconnect(false);
+  }, [fsSync.dirName, fsSync.needsPermission]);
+
+  const handleReconnect = async () => {
+    await fsSync.reconnect();
+    // După reconectare încearcă auto-restore dacă DB e gol
+    const count = await db.records.count();
+    if (count === 0) void fsSync.restoreFromFile();
+  };
+
+  return (
+    <>
+      {showReconnect && (
+        <div className="fixed top-0 inset-x-0 z-[100] bg-amber-600 text-white px-4 py-3 flex items-center justify-between gap-3 safe-area-top">
+          <p className="text-sm font-medium">📁 Reconectează folderul sync: <span className="font-bold">{fsSync.dirName}</span></p>
+          <button
+            onClick={() => void handleReconnect()}
+            className="shrink-0 px-3 py-1.5 bg-white/20 rounded-lg text-sm font-bold active:bg-white/30"
+          >
+            Reconectează
+          </button>
+        </div>
+      )}
+    </>
+  );
 }
