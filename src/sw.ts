@@ -8,6 +8,14 @@ import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
 declare const self: ServiceWorkerGlobalScope;
 
+// Preia controlul imediat (nu mai așteaptă închiderea tab-urilor)
+self.addEventListener('install', () => {
+  void self.skipWaiting();
+});
+self.addEventListener('activate', (event: ExtendableEvent) => {
+  event.waitUntil(self.clients.claim());
+});
+
 // Workbox injects the precache manifest here at build time
 precacheAndRoute(
   (self as unknown as { __WB_MANIFEST: Parameters<typeof precacheAndRoute>[0] }).__WB_MANIFEST ?? []

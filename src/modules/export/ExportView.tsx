@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
+
+declare const __BUILD_DATE__: string;
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/db';
 import { exportToCSV, exportToDiscogsCSV, importFromDiscogsCSV } from '@/utils/csvFormatter';
@@ -232,6 +234,24 @@ export function SettingsView() {
             <ActionButton onClick={handleExportCSV} label="Export CSV simplu" desc="artist, titlu, an, condiție, preț" />
             <ActionButton onClick={handleExportDiscogsCSV} label="Export Discogs CSV" desc="format compatibil import Discogs" />
             <ActionButton onClick={handleExportJSON} label="Backup complet JSON" desc="include coperte (base64)" />
+          </div>
+        </Section>
+
+        {/* Versiune */}
+        <Section title="Versiune">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-300">Build</p>
+              <p className="text-slate-500 text-xs mt-0.5 font-mono">
+                {new Date(__BUILD_DATE__).toLocaleString('ro-RO', { dateStyle: 'short', timeStyle: 'short' })}
+              </p>
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-3 py-1.5 text-xs rounded-md bg-slate-700 border border-slate-600 text-slate-300 active:bg-slate-600"
+            >
+              Reîncarcă
+            </button>
           </div>
         </Section>
 

@@ -7,6 +7,9 @@ import path from 'path'
 // https://vite.dev/config/
 export default defineConfig({
   base: '/vinyl-tracker/',
+  define: {
+    __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
