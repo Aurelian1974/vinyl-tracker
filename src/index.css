@@ -35,4 +35,22 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+
+  /* Scan feedback animations */
+  @keyframes scan-success {
+    0%   { transform: scale(1);    opacity: 1; }
+    40%  { transform: scale(1.12); opacity: 1; }
+    100% { transform: scale(1);    opacity: 0; }
+  }
+  @keyframes scan-warning {
+    0%,100% { background-color: transparent; }
+    20%,60% { background-color: rgba(239,68,68,0.25); }
+    40%,80% { background-color: transparent; }
+  }
+  .animate-scan-success {
+    animation: scan-success 0.5s ease-out forwards;
+  }
+  .animate-scan-warning {
+    animation: scan-warning 0.6s ease-in-out;
+  }
 }

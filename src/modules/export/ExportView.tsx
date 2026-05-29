@@ -6,13 +6,17 @@ import { exportToCSV, exportToDiscogsCSV, importFromDiscogsCSV } from '@/utils/c
 import { StorageIndicator } from '@/components/ui/StorageIndicator';
 import { useAppStore } from '@/stores/useAppStore';
 import { useDiscogCovers } from '@/hooks/useDiscogCovers';
+import { useSessionBudget } from '@/hooks/useSessionBudget';
 import type { Currency } from '@/db/types';
 
 export function SettingsView() {
   const navigate = useNavigate();
   const fileRef  = useRef<HTMLInputElement>(null);
-  const [msg, setMsg] = useState('');
+  const [msg, setMsg]               = useState('');
+  const [discogsToken, setDiscogsToken] = useState(() => localStorage.getItem('discogs_token') ?? '');
+  const [budgetInput, setBudgetInput]   = useState('');
   const { defaultCurrency, setDefaultCurrency } = useAppStore();
+  const budget = useSessionBudget();
 
   const records = useLiveQuery(() => db.records.toArray(), []) ?? [];
 
@@ -134,6 +138,83 @@ export function SettingsView() {
               <option value="RON">RON</option>
               <option value="EUR">EUR</option>
             </select>
+          </div>
+        </Section>
+
+        {/* Discogs token */}
+        <Section title="Discogs API">
+          <div className="space-y-2">
+            <p className="text-xs text-slate-400">
+              Personal Access Token — necesar pentru sugestii de preț Marketplace.{' '}
+              <a href="https://www.discogs.com/settings/developers" target="_blank" rel="noopener noreferrer"
+                 className="text-indigo-400 underline">
+                Generează token
+              </a>
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={discogsToken}
+                onChange={e => setDiscogsToken(e.target.value)}
+                placeholder="token Discogs..."
+                className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <button
+                onClick={() => {
+                  if (discogsToken.trim()) {
+                    localStorage.setItem('discogs_token', discogsToken.trim());
+                  } else {
+                    localStorage.removeItem('discogs_token');
+                  }
+                  toast('Token salvat');
+                }}
+                className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm active:bg-slate-600"
+              >
+                Salvează
+              </button>
+            </div>
+          </div>
+        </Section>
+
+        {/* Export */}
+        <Section title="Buget sesiune">
+          <div className="space-y-3">
+            {budget.active ? (
+              <>
+                <div className={`text-sm font-mono tabular-nums ${budget.overBudget ? 'text-red-400' : 'text-slate-300'}`}>
+                  Cheltuit: {budget.spent.toFixed(2)} / {budget.limit} RON
+                  {budget.overBudget && <span className="ml-2 text-xs text-red-400">DEPĂȘIT!</span>}
+                </div>
+                <button
+                  onClick={budget.endSession}
+                  className="w-full py-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-300 text-sm active:bg-slate-600"
+                >
+                  Închide sesiunea
+                </button>
+              </>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  placeholder={`Limită (ex. ${budget.limit})`}
+                  value={budgetInput}
+                  onChange={e => setBudgetInput(e.target.value)}
+                  className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <button
+                  onClick={() => {
+                    const limit = parseFloat(budgetInput);
+                    if (limit > 0) budget.setBudgetLimit(limit);
+                    budget.startSession();
+                    setBudgetInput('');
+                  }}
+                  className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium active:bg-indigo-700"
+                >
+                  Start
+                </button>
+              </div>
+            )}
           </div>
         </Section>
 

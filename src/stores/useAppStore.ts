@@ -7,6 +7,13 @@ interface AppState {
   defaultCurrency:      Currency;
   setLastLocation:      (loc: string)  => void;
   setDefaultCurrency:   (c: Currency)  => void;
+  // Session budget
+  budgetLimit:    number;
+  budgetActive:   boolean;
+  budgetStartedAt: Date | null;
+  setBudgetLimit:  (limit: number) => void;
+  startSession:    () => void;
+  endSession:      () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -16,6 +23,13 @@ export const useAppStore = create<AppState>()(
       defaultCurrency:      'RON',
       setLastLocation:      loc => set({ lastPurchaseLocation: loc }),
       setDefaultCurrency:   c   => set({ defaultCurrency: c }),
+      // Session budget
+      budgetLimit:    200,
+      budgetActive:   false,
+      budgetStartedAt: null,
+      setBudgetLimit:  limit => set({ budgetLimit: limit }),
+      startSession:    ()    => set({ budgetActive: true, budgetStartedAt: new Date() }),
+      endSession:      ()    => set({ budgetActive: false, budgetStartedAt: null }),
     }),
     { name: 'vinyl-tracker-ui' }
   )

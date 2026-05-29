@@ -65,3 +65,28 @@ export async function searchDiscogsBarcode(barcode: string): Promise<DiscogsSear
   const results = await searchDiscogs({ barcode });
   return results[0] ?? null;
 }
+
+export async function getDiscogsPriceSuggestion(
+  releaseId: string
+): Promise<Record<string, { currency: string; value: number }> | null> {
+  if (!releaseId) return null;
+  const token = localStorage.getItem('discogs_token');
+  if (!token) return null;   // feature e opt-in
+
+  try {
+    const res = await fetch(
+      `${DISCOGS_BASE}/marketplace/price_suggestions/${releaseId}`,
+      {
+        headers: {
+          'User-Agent':    USER_AGENT,
+          'Authorization': `Discogs token=${token}`,
+        },
+        signal: AbortSignal.timeout(5000),
+      }
+    );
+    if (!res.ok) return null;
+    return res.json() as Promise<Record<string, { currency: string; value: number }>>;
+  } catch {
+    return null;
+  }
+}

@@ -4,9 +4,10 @@ import { db } from '@/db/db';
 import type { VinylRecord, RecordFormat, VinylCondition, Currency } from '@/db/types';
 import { ConditionSelector } from './ConditionSelector';
 import { DiscogsResultList } from './DiscogsResultList';
-import { searchDiscogs, type DiscogsSearchResult } from '@/services/discogs';
+import { searchDiscogs, getDiscogsPriceSuggestion, type DiscogsSearchResult } from '@/services/discogs';
 import { mapDiscogsToRecord } from '@/utils/discogsMapper';
 import { useAppStore } from '@/stores/useAppStore';
+import { useDuplicateCheck } from '@/hooks/useDuplicateCheck';
 import { ALL_CONDITIONS } from '@/utils/vinylGrading';
 
 const FORMATS: RecordFormat[] = ['LP', 'EP', '7"', '10"', '12"', 'Box Set', 'Single'];
@@ -34,9 +35,13 @@ export function QuickAdd() {
 
   const [discogsQuery,   setDiscogsQuery]   = useState('');
   const [discogsResults, setDiscogsResults] = useState<DiscogsSearchResult[]>([]);
-  const [isSearching,    setIsSearching]    = useState(false);
-  const [saving,         setSaving]         = useState(false);
-  const [dupCheck,       setDupCheck]       = useState<'none' | 'owned' | 'wishlist'>('none');
+  const [isSearching,     setIsSearching]     = useState(false);
+  const [saving,          setSaving]          = useState(false);
+  const [priceSuggestion, setPriceSuggestion] = useState<Record<string, { currency: string; value: number }> | null>(null);
+  const [pressingNotes,   setPressingNotes]   = useState('');
+  const [matrixNumber,    setMatrixNumber]    = useState('');
+
+  const duplicates = useDuplicateCheck(artist, title, barcode || undefined);
 
   // Pre-fill from query params
   useEffect(() => {
@@ -61,20 +66,6 @@ export function QuickAdd() {
     return () => clearTimeout(timer);
   }, [discogsQuery]);
 
-  // Dup check
-  useEffect(() => {
-    if (!artist && !title) { setDupCheck('none'); return; }
-    void (async () => {
-      const all = await db.records.toArray();
-      const match = all.find(
-        r => r.artist.toLowerCase() === artist.toLowerCase() &&
-             r.title.toLowerCase()  === title.toLowerCase()
-      );
-      if (!match) setDupCheck('none');
-      else setDupCheck(match.status === 'wishlist' ? 'wishlist' : 'owned');
-    })();
-  }, [artist, title]);
-
   const applyDiscogs = (r: DiscogsSearchResult) => {
     const mapped = mapDiscogsToRecord(r);
     if (mapped.artist)        setArtist(mapped.artist);
@@ -87,6 +78,12 @@ export function QuickAdd() {
     if (mapped.coverUrl)      setCoverUrl(mapped.coverUrl ?? '');
     setDiscogsResults([]);
     setDiscogsQuery('');
+    // Fetch price suggestion for selected release
+    if (mapped.discogsId) {
+      void getDiscogsPriceSuggestion(mapped.discogsId).then(data => {
+        setPriceSuggestion(data);
+      });
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -111,6 +108,8 @@ export function QuickAdd() {
       barcode:         barcode || undefined,
       discogsId:       discogsId || undefined,
       coverUrl:        coverUrl || undefined,
+      pressingNotes:   pressingNotes || undefined,
+      matrixNumber:    matrixNumber  || undefined,
       createdAt:       new Date(),
       updatedAt:       new Date(),
     };
@@ -137,15 +136,22 @@ export function QuickAdd() {
       </header>
 
       <form onSubmit={handleSave} className="p-4 space-y-5 pb-40">
-        {/* Duplicate warning */}
-        {dupCheck === 'owned' && (
-          <div className="flex items-center gap-2 bg-amber-900/40 border border-amber-700 rounded-xl px-4 py-3 text-amber-300 text-sm">
-            ⚠ Ai deja acest vinil în colecție!
-          </div>
-        )}
-        {dupCheck === 'wishlist' && (
-          <div className="flex items-center gap-2 bg-blue-900/40 border border-blue-700 rounded-xl px-4 py-3 text-blue-300 text-sm">
-            🎯 Este pe wishlist!
+        {/* Fuzzy duplicate warnings */}
+        {duplicates.length > 0 && (
+          <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 space-y-1.5">
+            {duplicates.map(d => (
+              <div key={d.record.id} className="flex items-center justify-between">
+                <span className="text-xs text-amber-400">
+                  {d.type === 'exact-barcode' ? '⚠ Ai exact acest vinil' :
+                   d.type === 'wishlist'      ? '🎯 Pe wishlist' :
+                                                '≈ Posibil duplicat'}
+                  {' '}<span className="text-white/40">{d.record.artist} — {d.record.title}</span>
+                </span>
+                <span className="text-xs text-white/40 shrink-0 ml-2">
+                  {d.record.condition}{d.record.pricePaid ? ` · ${d.record.pricePaid} ${d.record.currency}` : ''}
+                </span>
+              </div>
+            ))}
           </div>
         )}
 
@@ -307,6 +313,14 @@ export function QuickAdd() {
               <option value="EUR">EUR</option>
             </select>
           </div>
+          {priceSuggestion && priceSuggestion[cond] && (
+            <p className="text-xs text-white/40 mt-1.5">
+              Discogs median ({cond}):{' '}
+              <span className="text-white/70 font-medium">
+                {priceSuggestion[cond].value.toFixed(0)} {priceSuggestion[cond].currency}
+              </span>
+            </p>
+          )}
         </div>
 
         {/* Location */}
@@ -319,6 +333,30 @@ export function QuickAdd() {
             placeholder="ex: Obor, Piața Romană..."
             className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-base text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-indigo-500"
           />
+        </div>
+
+        {/* Pressing notes + matrix */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm text-slate-400 mb-1.5">Presare / notă</label>
+            <input
+              type="text"
+              value={pressingNotes}
+              onChange={e => setPressingNotes(e.target.value)}
+              placeholder="ex: 1st UK, German"
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-base text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-400 mb-1.5">Matrix</label>
+            <input
+              type="text"
+              value={matrixNumber}
+              onChange={e => setMatrixNumber(e.target.value)}
+              placeholder="ex: A1/B1"
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-base text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
         </div>
 
         {/* Notes */}

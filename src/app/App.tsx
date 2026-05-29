@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { flushOfflineQueue } from '@/services/offlineQueue';
+import { useSessionBudget } from '@/hooks/useSessionBudget';
 
 export function BottomNav() {
   const routerState = useRouterState();
   const pathname    = routerState.location.pathname;
+  const budget      = useSessionBudget();
 
   // Hide bottom nav on scanner (fullscreen camera) and detail pages
   if (pathname.startsWith('/scanner') || pathname.match(/^\/collection\/\d+/)) return null;
@@ -19,25 +21,43 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur border-t border-slate-800 safe-area-bottom">
-      <div className="flex">
-        {tabs.map(tab => {
-          const active = pathname === tab.to || (tab.to !== '/' && pathname.startsWith(tab.to));
-          return (
-            <Link
-              key={tab.to}
-              to={tab.to}
-              className={`flex-1 flex flex-col items-center py-2 min-h-[56px] justify-center transition-colors ${
-                active ? 'text-indigo-400' : 'text-slate-500'
-              }`}
-            >
-              <span className="text-xl leading-none">{tab.icon}</span>
-              <span className="text-xs mt-1 leading-none">{tab.label}</span>
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+    <>
+      {/* Session budget strip */}
+      {budget.active && (
+        <div className={`fixed bottom-14 inset-x-0 z-40 flex items-center justify-between px-4 py-1.5 text-xs font-mono tabular-nums
+          ${budget.overBudget
+            ? 'bg-red-500/20 text-red-400 border-t border-red-500/30'
+            : 'bg-white/5 text-white/50 border-t border-white/5'}`}>
+          <span>Sesiune: {budget.spent.toFixed(0)} / {budget.limit} RON</span>
+          <button
+            onClick={budget.endSession}
+            className="text-white/30 hover:text-white/60 transition-colors"
+          >
+            ✕ Închide
+          </button>
+        </div>
+      )}
+
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur border-t border-slate-800 safe-area-bottom">
+        <div className="flex">
+          {tabs.map(tab => {
+            const active = pathname === tab.to || (tab.to !== '/' && pathname.startsWith(tab.to));
+            return (
+              <Link
+                key={tab.to}
+                to={tab.to}
+                className={`flex-1 flex flex-col items-center py-2 min-h-[56px] justify-center transition-colors ${
+                  active ? 'text-indigo-400' : 'text-slate-500'
+                }`}
+              >
+                <span className="text-xl leading-none">{tab.icon}</span>
+                <span className="text-xs mt-1 leading-none">{tab.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </>
   );
 }
 

@@ -13,6 +13,7 @@ export function useCoverCapture(recordId: number) {
     const existing = await db.coverImages.where('recordId').equals(recordId).first();
     const data = {
       recordId,
+      photoType: 'cover-front' as const,
       thumbnail,
       full,
       capturedAt: new Date(),
