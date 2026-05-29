@@ -1,11 +1,17 @@
 import Dexie, { type Table } from 'dexie';
 import type { VinylRecord, CoverImage, OfflineQueueItem, PlayLog } from './types';
 
+export interface FsHandleEntry {
+  key: string;
+  handle: FileSystemDirectoryHandle;
+}
+
 export class VinylDB extends Dexie {
   records!:      Table<VinylRecord>;
   coverImages!:  Table<CoverImage>;
   offlineQueue!: Table<OfflineQueueItem>;
   playLogs!:     Table<PlayLog>;
+  fsHandles!:    Table<FsHandleEntry>;
 
   constructor() {
     super('VinylTracker');
@@ -40,6 +46,15 @@ export class VinylDB extends Dexie {
         if (!img.photoType) img.photoType = 'cover-front';
       })
     );
+
+    // v4: fsHandles table for File System Access API sync
+    this.version(4).stores({
+      records:      '++id, barcode, discogsId, artist, status, purchaseDate, *genres, *styles, purchaseLocation, lastPlayedAt',
+      coverImages:  '++id, recordId, photoType',
+      offlineQueue: '++id, type, createdAt',
+      playLogs:     '++id, recordId, playedAt',
+      fsHandles:    'key',
+    });
   }
 }
 

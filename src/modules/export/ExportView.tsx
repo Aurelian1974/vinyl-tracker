@@ -9,6 +9,7 @@ import { StorageIndicator } from '@/components/ui/StorageIndicator';
 import { useAppStore } from '@/stores/useAppStore';
 import { useDiscogCovers } from '@/hooks/useDiscogCovers';
 import { useSessionBudget } from '@/hooks/useSessionBudget';
+import { useFileSystemSync } from '@/hooks/useFileSystemSync';
 import type { Currency } from '@/db/types';
 
 export function SettingsView() {
@@ -237,6 +238,11 @@ export function SettingsView() {
           </div>
         </Section>
 
+        {/* Sync local */}
+        <Section title="Sync local (fișier pe disc)">
+          <LocalSyncSection />
+        </Section>
+
         {/* Versiune */}
         <Section title="Versiune">
           <div className="flex items-center justify-between">
@@ -302,6 +308,97 @@ function CoverCacheSection() {
       >
         {isCaching ? 'Se descarcă...' : 'Descarcă toate'}
       </button>
+    </div>
+  );
+}
+
+function LocalSyncSection() {
+  const sync = useFileSystemSync();
+  const [confirming, setConfirming] = useState(false);
+
+  return (
+    <div className="space-y-3">
+      {!sync.isSupported && (
+        <p className="text-xs text-amber-400">Browser-ul nu suportă File System Access API.</p>
+      )}
+
+      {sync.isSupported && (
+        <>
+          <p className="text-xs text-slate-400">
+            Salvează automat colecția într-un fișier pe disc.{' '}
+            <span className="text-slate-300">Supraviețuiește oricărui clear cache.</span>
+          </p>
+
+          {/* Folder ales */}
+          {sync.dirName ? (
+            <div className="flex items-center gap-2 bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2">
+              <span className="text-green-400 text-sm">📁</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-sm truncate">{sync.dirName}</p>
+                <p className="text-slate-400 text-xs">vinyl-tracker-data.json</p>
+              </div>
+              <button
+                onClick={() => setConfirming(true)}
+                className="text-slate-500 hover:text-red-400 text-xs transition-colors px-2 py-1"
+              >
+                Elimină
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => void sync.pickFolder()}
+              className="w-full py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium active:bg-indigo-700"
+            >
+              Alege folder de sync
+            </button>
+          )}
+
+          {/* Confirmare eliminare */}
+          {confirming && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => { void sync.clearFolder(); setConfirming(false); }}
+                className="flex-1 py-2 rounded-lg bg-red-600/80 text-white text-sm active:bg-red-700"
+              >
+                Confirmă eliminare
+              </button>
+              <button
+                onClick={() => setConfirming(false)}
+                className="flex-1 py-2 rounded-lg bg-slate-700 text-slate-300 text-sm active:bg-slate-600"
+              >
+                Anulează
+              </button>
+            </div>
+          )}
+
+          {/* Acțiuni */}
+          {sync.dirName && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => void sync.saveToFile()}
+                disabled={sync.status === 'busy'}
+                className="flex-1 py-2 rounded-lg bg-slate-700 border border-slate-600 text-white text-sm active:bg-slate-600 disabled:opacity-40"
+              >
+                {sync.status === 'busy' ? 'Se salvează...' : 'Salvează acum'}
+              </button>
+              <button
+                onClick={() => void sync.restoreFromFile()}
+                disabled={sync.status === 'busy'}
+                className="flex-1 py-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-300 text-sm active:bg-slate-600 disabled:opacity-40"
+              >
+                Restaurează
+              </button>
+            </div>
+          )}
+
+          {/* Status */}
+          {sync.message && (
+            <p className={`text-xs ${sync.status === 'error' ? 'text-red-400' : sync.status === 'ok' ? 'text-green-400' : 'text-slate-400'}`}>
+              {sync.message}
+            </p>
+          )}
+        </>
+      )}
     </div>
   );
 }

@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { flushOfflineQueue } from '@/services/offlineQueue';
 import { useSessionBudget } from '@/hooks/useSessionBudget';
+import { useFileSystemSync } from '@/hooks/useFileSystemSync';
+import { db } from '@/db/db';
 
 export function BottomNav() {
   const routerState = useRouterState();
@@ -62,6 +64,8 @@ export function BottomNav() {
 }
 
 export function App() {
+  const fsSync = useFileSystemSync();
+
   useEffect(() => {
     // Request persistent storage on first load
     navigator.storage?.persist().then(granted => {
@@ -72,7 +76,21 @@ export function App() {
     const handleOnline = () => { void flushOfflineQueue(); };
     window.addEventListener('online', handleOnline);
     if (navigator.onLine) void flushOfflineQueue();
+
+    // Auto-restore din fișier dacă IndexedDB e gol
+    void (async () => {
+      await fsSync.init();
+      const count = await db.records.count();
+      if (count === 0) {
+        const result = await fsSync.restoreFromFile();
+        if (result.restored && result.count > 0) {
+          console.info(`[VinylTracker] Auto-restored ${result.count} records from local file`);
+        }
+      }
+    })();
+
     return () => window.removeEventListener('online', handleOnline);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return null; // Router renders the actual pages
