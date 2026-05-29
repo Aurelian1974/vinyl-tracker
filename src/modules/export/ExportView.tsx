@@ -144,8 +144,16 @@ export function SettingsView() {
         {/* Discogs token */}
         <Section title="Discogs API">
           <div className="space-y-2">
+            {!discogsToken && (
+              <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
+                <span className="text-amber-400 mt-0.5">⚠️</span>
+                <p className="text-xs text-amber-300">
+                  Fără token, copertele Discogs <strong>nu se afișează</strong>. Adaugă un token pentru a vedea copertele în colecție.
+                </p>
+              </div>
+            )}
             <p className="text-xs text-slate-400">
-              Personal Access Token — necesar pentru sugestii de preț Marketplace.{' '}
+              Personal Access Token — necesar pentru coperte și sugestii de preț.{' '}
               <a href="https://www.discogs.com/settings/developers" target="_blank" rel="noopener noreferrer"
                  className="text-indigo-400 underline">
                 Generează token

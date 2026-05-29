@@ -31,6 +31,14 @@ export interface DiscogsRelease {
 const DISCOGS_BASE = 'https://api.discogs.com';
 const USER_AGENT   = 'VinylTracker/1.0 +https://github.com/Aurelian1974/vinyl-tracker';
 
+/** Returnează headerele HTTP pentru Discogs, cu token dacă e disponibil. */
+function discogsHeaders(): Record<string, string> {
+  const token = localStorage.getItem('discogs_token');
+  const headers: Record<string, string> = { 'User-Agent': USER_AGENT };
+  if (token) headers['Authorization'] = `Discogs token=${token}`;
+  return headers;
+}
+
 interface SearchParams {
   barcode?: string;
   query?:   string;
@@ -43,7 +51,7 @@ export async function searchDiscogs({ barcode, query, type = 'release' }: Search
     : `q=${encodeURIComponent(query ?? '')}&type=${type}`;
 
   const res = await fetch(`${DISCOGS_BASE}/database/search?${params}`, {
-    headers: { 'User-Agent': USER_AGENT },
+    headers: discogsHeaders(),
     signal:  AbortSignal.timeout(8000),
   });
 
@@ -54,7 +62,7 @@ export async function searchDiscogs({ barcode, query, type = 'release' }: Search
 
 export async function getDiscogsRelease(releaseId: string): Promise<DiscogsRelease> {
   const res = await fetch(`${DISCOGS_BASE}/releases/${releaseId}`, {
-    headers: { 'User-Agent': USER_AGENT },
+    headers: discogsHeaders(),
     signal:  AbortSignal.timeout(8000),
   });
   if (!res.ok) throw new Error(`Discogs ${res.status}`);
@@ -70,19 +78,13 @@ export async function getDiscogsPriceSuggestion(
   releaseId: string
 ): Promise<Record<string, { currency: string; value: number }> | null> {
   if (!releaseId) return null;
-  const token = localStorage.getItem('discogs_token');
-  if (!token) return null;   // feature e opt-in
+  // Price suggestions necesită autentificare obligatoriu
+  if (!localStorage.getItem('discogs_token')) return null;
 
   try {
     const res = await fetch(
       `${DISCOGS_BASE}/marketplace/price_suggestions/${releaseId}`,
-      {
-        headers: {
-          'User-Agent':    USER_AGENT,
-          'Authorization': `Discogs token=${token}`,
-        },
-        signal: AbortSignal.timeout(5000),
-      }
+      { headers: discogsHeaders(), signal: AbortSignal.timeout(5000) }
     );
     if (!res.ok) return null;
     return res.json() as Promise<Record<string, { currency: string; value: number }>>;

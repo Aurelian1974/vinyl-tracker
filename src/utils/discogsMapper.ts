@@ -10,7 +10,7 @@ export function mapDiscogsToRecord(result: DiscogsSearchResult): Partial<VinylRe
   const coverUrl = result.cover_image &&
     !result.cover_image.includes('st.discogs.com') &&
     !result.cover_image.includes('spacer') &&
-    result.cover_image.startsWith('https://i.discogs.com/')
+    result.cover_image.startsWith('https://')
       ? result.cover_image
       : undefined;
 
