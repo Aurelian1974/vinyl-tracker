@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useCoverImage }       from '@/hooks/useCoverImage';
 import { useCoverCacheStatus } from '@/hooks/useDiscogCovers';
 
@@ -12,7 +13,8 @@ interface CoverImageProps {
 export function CoverImage({ recordId, coverUrl, alt, size = 'thumbnail', className = '' }: CoverImageProps) {
   const localUrl  = useCoverImage(recordId, size);
   const isCached  = useCoverCacheStatus(coverUrl);
-  const src = localUrl ?? coverUrl ?? null;
+  const [imgError, setImgError] = useState(false);
+  const src = localUrl ?? (!imgError ? coverUrl ?? null : null);
 
   if (!src) {
     return (
@@ -32,6 +34,7 @@ export function CoverImage({ recordId, coverUrl, alt, size = 'thumbnail', classN
         alt={alt}
         className="w-full h-full object-cover"
         loading="lazy"
+        onError={() => setImgError(true)}
       />
       {/* Badge mic — copertă Discogs cached offline */}
       {!localUrl && coverUrl && isCached && (

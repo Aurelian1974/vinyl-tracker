@@ -6,6 +6,14 @@ export function mapDiscogsToRecord(result: DiscogsSearchResult): Partial<VinylRe
   const artist = parts[0]?.trim() ?? result.title;
   const title  = parts.slice(1).join(' - ').trim() || '';
 
+  // Filtrăm imaginile placeholder Discogs (spacer.gif sau st.discogs.com)
+  const coverUrl = result.cover_image &&
+    !result.cover_image.includes('st.discogs.com') &&
+    !result.cover_image.includes('spacer') &&
+    result.cover_image.startsWith('https://i.discogs.com/')
+      ? result.cover_image
+      : undefined;
+
   return {
     artist,
     title,
@@ -17,7 +25,7 @@ export function mapDiscogsToRecord(result: DiscogsSearchResult): Partial<VinylRe
     country:       result.country,
     discogsId:     String(result.id),
     discogsUrl:    result.resource_url,
-    coverUrl:      result.cover_image,
+    coverUrl,
     format:        mapFormat(result.format),
     currency:      'RON',
     status:        'owned',

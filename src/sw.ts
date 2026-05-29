@@ -4,6 +4,7 @@ import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
 import { NetworkFirst, CacheFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
+import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
 declare const self: ServiceWorkerGlobalScope;
 
@@ -24,11 +25,15 @@ registerRoute(
 );
 
 // Runtime: Discogs images — CacheFirst (max 500 entries)
+// CacheableResponsePlugin cu status 0 e necesar pentru răspunsuri opaque (no-cors)
 registerRoute(
-  ({ url }) => url.hostname === 'i.discogs.com',
+  ({ url }) => url.hostname === 'i.discogs.com' || url.hostname === 'st.discogs.com',
   new CacheFirst({
     cacheName: 'discogs-images',
-    plugins: [new ExpirationPlugin({ maxEntries: 500 })],
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new ExpirationPlugin({ maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 }),
+    ],
   })
 );
 

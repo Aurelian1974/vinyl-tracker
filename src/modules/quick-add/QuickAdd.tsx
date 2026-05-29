@@ -8,6 +8,7 @@ import { searchDiscogs, getDiscogsPriceSuggestion, type DiscogsSearchResult } fr
 import { mapDiscogsToRecord } from '@/utils/discogsMapper';
 import { useAppStore } from '@/stores/useAppStore';
 import { useDuplicateCheck } from '@/hooks/useDuplicateCheck';
+import { precacheDiscogCovers } from '@/services/coverCache';
 import { ALL_CONDITIONS } from '@/utils/vinylGrading';
 
 const FORMATS: RecordFormat[] = ['LP', 'EP', '7"', '10"', '12"', 'Box Set', 'Single'];
@@ -116,6 +117,8 @@ export function QuickAdd() {
 
     try {
       await db.records.add(record);
+      // Pre-cache coperta imediat (SW — opaque fetch, funcționează fără CORS)
+      if (record.coverUrl) void precacheDiscogCovers([record.coverUrl]);
       if (location) setLastLocation(location);
       navigator.vibrate?.(80);
       await navigate({ to: '/collection' });
