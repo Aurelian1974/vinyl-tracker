@@ -37,13 +37,13 @@ registerRoute(
 );
 
 // Runtime: Discogs images — CacheFirst (max 500 entries)
-// CacheableResponsePlugin cu status 0 e necesar pentru răspunsuri opaque (no-cors)
+// Doar status 200 (CORS) — status 0 (opaque/no-cors) cauzează padding de ~7 MB/imagine în estimate
 registerRoute(
   ({ url }) => url.hostname === 'i.discogs.com' || url.hostname === 'st.discogs.com',
   new CacheFirst({
     cacheName: 'discogs-images',
     plugins: [
-      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new CacheableResponsePlugin({ statuses: [200] }),
       new ExpirationPlugin({ maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 }),
     ],
   })
@@ -71,10 +71,19 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
       );
       const toFetch = missing.filter((u): u is string => u !== null);
 
-      // Fetch în batch-uri de 5 — respectă rate limit CDN
+      // Fetch în batch-uri de 5 — mode: cors pentru a evita opaque padding (~7 MB/imagine)
       for (let i = 0; i < toFetch.length; i += 5) {
         const batch = toFetch.slice(i, i + 5);
-        await Promise.allSettled(batch.map(url => cache.add(url)));
+        await Promise.allSettled(
+          batch.map(async url => {
+            try {
+              const resp = await fetch(url, { mode: 'cors' });
+              if (resp.ok) await cache.put(url, resp);
+            } catch {
+              // CORS not supported by CDN — skip caching for this image
+            }
+          })
+        );
         if (i + 5 < toFetch.length) {
           await new Promise<void>(r => setTimeout(r, 300));
         }
