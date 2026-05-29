@@ -13,7 +13,13 @@ self.addEventListener('install', () => {
   void self.skipWaiting();
 });
 self.addEventListener('activate', (event: ExtendableEvent) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    Promise.all([
+      self.clients.claim(),
+      // Șterge cache-ul vechi cu imagini opaque (cauza umflării la 700+ MB pe mobil)
+      caches.delete('discogs-images'),
+    ])
+  );
 });
 
 // Workbox injects the precache manifest here at build time
@@ -38,10 +44,11 @@ registerRoute(
 
 // Runtime: Discogs images — CacheFirst (max 500 entries)
 // Doar status 200 (CORS) — status 0 (opaque/no-cors) cauzează padding de ~7 MB/imagine în estimate
+// Cache redenumit discogs-covers-v2 (v1=discogs-images cu opaque, șters în activate)
 registerRoute(
   ({ url }) => url.hostname === 'i.discogs.com' || url.hostname === 'st.discogs.com',
   new CacheFirst({
-    cacheName: 'discogs-images',
+    cacheName: 'discogs-covers-v2',
     plugins: [
       new CacheableResponsePlugin({ statuses: [200] }),
       new ExpirationPlugin({ maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 }),
@@ -63,7 +70,7 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
 
   event.waitUntil(
     (async () => {
-      const cache = await caches.open('discogs-images');
+      const cache = await caches.open('discogs-covers-v2');
 
       // Verifică care nu sunt deja cached
       const missing = await Promise.all(

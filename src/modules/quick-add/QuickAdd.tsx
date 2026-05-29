@@ -10,6 +10,7 @@ import { useAppStore } from '@/stores/useAppStore';
 import { useDuplicateCheck } from '@/hooks/useDuplicateCheck';
 import { precacheDiscogCovers } from '@/services/coverCache';
 import { ALL_CONDITIONS } from '@/utils/vinylGrading';
+import { autoSave } from '@/services/localSync';
 
 const FORMATS: RecordFormat[] = ['LP', 'EP', '7"', '10"', '12"', 'Box Set', 'Single'];
 
@@ -117,6 +118,7 @@ export function QuickAdd() {
 
     try {
       await db.records.add(record);
+      void autoSave();
       // Pre-cache coperta imediat (SW — opaque fetch, funcționează fără CORS)
       if (record.coverUrl) void precacheDiscogCovers([record.coverUrl]);
       if (location) setLastLocation(location);

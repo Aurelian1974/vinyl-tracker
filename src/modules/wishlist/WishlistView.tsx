@@ -5,6 +5,7 @@ import { db } from '@/db/db';
 import type { VinylRecord, Currency } from '@/db/types';
 import { ConditionBadge } from '@/components/ui/ConditionBadge';
 import { CoverImage } from '@/components/ui/CoverImage';
+import { autoSave } from '@/services/localSync';
 
 export function WishlistView() {
   const navigate  = useNavigate();
@@ -38,12 +39,14 @@ export function WishlistView() {
       updatedAt:       new Date(),
     };
     await db.records.add(record);
+    void autoSave();
     navigator.vibrate?.(80);
     setArtist(''); setTitle(''); setMaxPrice(''); setAdding(false);
   };
 
   const handleRemove = async (id: number) => {
     await db.records.delete(id);
+    void autoSave();
     navigator.vibrate?.(80);
   };
 

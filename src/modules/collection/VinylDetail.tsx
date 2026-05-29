@@ -6,6 +6,7 @@ import { CoverImage } from '@/components/ui/CoverImage';
 import { ConditionBadge } from '@/components/ui/ConditionBadge';
 import { useCoverCapture } from '@/hooks/useCoverCapture';
 import type { PhotoType } from '@/db/types';
+import { autoSave } from '@/services/localSync';
 
 const PHOTO_TYPE_LABELS: Record<PhotoType, string> = {
   'cover-front':  'Față',
@@ -46,6 +47,7 @@ export function VinylDetail() {
     if (!confirm) { setConfirm(true); return; }
     await db.records.delete(recordId);
     await db.coverImages.where('recordId').equals(recordId).delete();
+    void autoSave();
     navigator.vibrate?.(80);
     await navigate({ to: '/collection' });
   };
@@ -56,6 +58,7 @@ export function VinylDetail() {
       playCount:    (record!.playCount ?? 0) + 1,
       lastPlayedAt: new Date(),
     });
+    void autoSave();
     navigator.vibrate?.(30);
   };
 
@@ -67,6 +70,7 @@ export function VinylDetail() {
       soldDate:  soldDate ? new Date(soldDate) : undefined,
       soldTo:    soldTo.trim() || undefined,
     });
+    void autoSave();
     setShowSell(false);
   };
 
