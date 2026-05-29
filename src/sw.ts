@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 
-import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
-import { registerRoute } from 'workbox-routing';
+import { cleanupOutdatedCaches, precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
+import { NavigationRoute, registerRoute } from 'workbox-routing';
 import { NetworkFirst, CacheFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
@@ -21,6 +21,10 @@ precacheAndRoute(
   (self as unknown as { __WB_MANIFEST: Parameters<typeof precacheAndRoute>[0] }).__WB_MANIFEST ?? []
 );
 cleanupOutdatedCaches();
+
+// SPA navigation fallback: orice navigare (refresh, link direct) servește index.html din precache
+// Fără asta, SW-ul lasă navigările spre server → GitHub Pages returnează 404
+registerRoute(new NavigationRoute(createHandlerBoundToURL('/vinyl-tracker/index.html')));
 
 // Runtime: Discogs API — NetworkFirst (5s timeout, cached 24h)
 registerRoute(
